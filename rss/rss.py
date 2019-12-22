@@ -12,10 +12,12 @@ class Rainbow_Six_Siege(commands.Cog):
         self.data = Config.get_conf(self, identifier=62078023501206325104, force_registration=True)
         default_guild = {
             "maps": [],
-            "lobbies": {}
+            "lobbies": {},
+            "channel": None
         }
         default_member = {
-            "registered": False
+            "registered": False,
+            "points": 0
         }
         self.data.register_guild(**default_guild)
         self.data.register_member(**default_member)
@@ -25,9 +27,22 @@ class Rainbow_Six_Siege(commands.Cog):
         if ctx.invoked_subcommand is None:
             pass
 
+    @rssset.command(name="channel")
+    async def _setchannel(self, ctx, channel: discord.TextChannel):
+        """Set a channel"""
+        if not await self.role_check(ctx.author, ctx.guild):
+            await ctx.send("You can't use this command.")
+            return
+        await self.data.guild(ctx.guild).channel.set(channel.id)
+        await ctx.send(f"Successfully set the channel too {channel.mention}.")
+
     @rssset.command(name="add")
     async def addmap(self, ctx, *, name: str):
         """Add a map to the list."""
+        if not await self.role_check(ctx.author, ctx.guild):
+            await ctx.send("You can't use this command.")
+            return
+
         maps_list = await self.data.guild(ctx.guild).maps()
         if name.lower() in maps_list:
             await ctx.send("That map already exists in the list.")
@@ -39,6 +54,9 @@ class Rainbow_Six_Siege(commands.Cog):
     @rssset.command(name="remove")
     async def removemap(self, ctx, *, name: str):
         """Remove a map from the list."""
+        if not await self.role_check(ctx.author, ctx.guild):
+            await ctx.send("You can't use this command.")
+            return
         maps_list = await self.data.guild(ctx.guild).maps()
         if name.lower() in maps_list:
             maps_list.remove(name.lower())
@@ -46,6 +64,166 @@ class Rainbow_Six_Siege(commands.Cog):
             await ctx.send(f"**{name}** was removed from the list.")
         elif name.lower() not in maps_list:
             await ctx.send(f"**{name}** is not in the list.")
+
+    @rssset.command(name="allmaps")
+    async def _allmaps(self, ctx):
+        maps_list = await self.data.guild(ctx.guild).maps()
+        if maps_list:
+            await ctx.send(f"**Total Maps - {len(maps_list)}**\n\n{', '.join(maps_list)}")
+        else:
+            await ctx.send("There are no existing maps.")
+
+    @rssset.command(name="win")
+    async def _win(self, ctx, user: discord.Member, points: int):
+        """Assign points to a user."""
+        if not await self.role_check(ctx.author, ctx.guild):
+            await ctx.send("You can't use this command.")
+            return
+        if await self.data.member(user).registered() == True:
+            points = await self.data.member(user).points() + points
+            if points > 0:
+                await self.data.member(user).points.set(points)
+                await ctx.send(f"Successfully set the points too {points}.")
+            else:
+                await ctx.send("The point can't be less than 0.")
+        elif await self.data.member(user).registered() == False:
+            await ctx.send("This user is not registered")
+
+    @rssset.command(name="lose")
+    async def _lose(self, ctx, user: discord.Member, points: int):
+        """Remove points to a user."""
+        if not await self.role_check(ctx.author, ctx.guild):
+            await ctx.send("You can't use this command.")
+            return
+        if await self.data.member(user).registered() == True:
+            points = await self.data.member(user).points() - points
+            if points > 0:
+                await self.data.member(user).points.set(points)
+                await ctx.send(f"Successfully set the points too {points}.")
+            else:
+                await ctx.send("The point can't be less than 0.")
+        elif await self.data.member(user).registered() == False:
+            await ctx.send("This user is not registered")
+
+    @rssset.command(name="game")
+    async def _game(self, ctx, channel: discord.TextChannel, team: str, points_to_add: int, points_to_deduct: int):
+        """Award game points to users."""
+        lobbies = await self.data.guild(ctx.guild).lobbies()
+        channel_id = str(ctx.channel.id)
+        if not await self.role_check(ctx.author, ctx.guild):
+            await ctx.send("You can't use this command.")
+            return
+
+        if str(ctx.channel.id) not in lobbies:
+            await ctx.send("There is no lobby created in that channel.")
+            return
+
+        if team.lower() not in ["team1", "team2"]:
+            await ctx.send("Invalid team name, it should be one of these `team1 or team2`.")
+        elif team.lower() == "team1":
+            # add points to team one
+            captain_one = await self.data.guild(ctx.guild).lobbies.get_raw(channel_id,"team_one", "captains")
+            players = await self.data.guild(ctx.guild).lobbies.get_raw(channel_id, "team_one", "players")
+            for user in players:
+                user = ctx.guild.get_member(user)
+                if user and await self.data.member(user).registered():
+                    points_to_add = await self.data.member(user).points() + points_to_add
+                    await self.data.member(user).points.set(points_to_add)
+            #add points to the team captain
+            captain = await ctx.guild.get_member(int(captain_one))
+            if captain:
+                points_to_add = await self.data.member(captain).points() + points_to_add
+                await self.data.member(captain).points.set(points_to_add)
+            await ctx.send("Successfully added points to the players in team one and reset the data.")
+
+            #remove points from team two
+            captain_two = await self.data.guild(ctx.guild).lobbies.get_raw(channel_id,"team_two", "captains")
+            players = await self.data.guild(ctx.guild).lobbies.get_raw(channel_id, "team_two", "players")
+            for user in players:
+                user = ctx.guild.get_member(user)
+                if user and await self.data.member(user).registered():
+                    points_to_deduct = await self.data.member(user).points() - points_to_deduct
+                    await self.data.member(user).points.set(points_to_deduct)
+            #remove points from team captain
+            captain = await ctx.guild.get_member(int(captain_two))
+            if captain:
+                points_to_deduct = await self.data.member(captain).points() - points_to_deduct
+                await self.data.member(captain).points.set(points_to_deduct)
+            await self.data.guild(ctx.guild).lobbies.clear_raw(str(ctx.channel.id))
+        elif team.lower() == "team2":
+            #add points to the team two
+            captain_two = await self.data.guild(ctx.guild).lobbies.get_raw(channel_id,"team_two", "captains")
+            players = await self.data.guild(ctx.guild).lobbies.get_raw(channel_id, "team_two", "players")
+            for user in players:
+                user = ctx.guild.get_member(user)
+                if user and await self.data.member(user).registered():
+                    points_to_add = await self.data.member(user).points() + points_to_add
+                    await self.data.member(user).points.set(points_to_add)
+            #add points the team captain
+            captain = await ctx.guild.get_member(int(captain_two))
+            if captain:
+                points_to_add = await self.data.member(captain).points() + points_to_add
+                await self.data.member(captain).points.set(points_to_add)
+            await ctx.send("Successfully added points to the players in team one and reset the data!")
+
+            #remove points from the team one
+            captain_one = await self.data.guild(ctx.guild).lobbies.get_raw(channel_id,"team_one", "captains")
+            players = await self.data.guild(ctx.guild).lobbies.get_raw(channel_id, "team_one", "players")
+            for user in players:
+                user = ctx.guild.get_member(user)
+                if user and await self.data.member(user).registered():
+                    points_to_deduct = await self.data.member(user).points() - points_to_deduct
+                    await self.data.member(user).points.set(points_to_deduct)
+            #remove points from the team one captain
+            captain = await ctx.guild.get_member(int(captain_one))
+            if captain:
+                points_to_deduct = await self.data.member(captain).points() - points_to_deduct
+                await self.data.member(captain).points.set(points_to_deduct)
+            await self.data.guild(ctx.guild).lobbies.clear_raw(str(ctx.channel.id))
+
+    @commands.command(aliases=["leaderboard", "lb"])
+    async def _leadeboard(self, ctx, page_no: int=None):
+        """Leaderboard for the points."""
+        server = ctx.guild
+        server_data = await self.data.all_members(server)
+        msg = ""
+        if page_no is None:
+            page_no = 1
+
+        if page_no <= 0:
+            await ctx.send("Invalid page number.")
+            return
+        index_number = page_no*10
+        if index_number > 10:
+            if len(server_data) < index_number:
+                await ctx.send(f"There is no data in page number {page_no}.")
+                return
+        try:
+            rank = sorted(server_data, key=lambda x: server_data[x]["points"], reverse=True)[:index_number]
+        except Exception as e:
+            await ctx.send(f"An error occured, ```{e}```.")
+            return
+
+        if not rank:
+            await ctx.send("Invalid page number.")
+            return
+
+        if page_no == 1:
+            i = 0
+        elif page_no > 1:
+            i = (page_no - 1)*10
+
+        for x in rank:
+            i+=1
+            points = server_data[x]["points"]
+            user = ctx.guild.get_member(x)
+            if user:
+                msg+= f'{i} - `{user.name}` - {points}\n'
+            else:
+                msg+= f'{i} - `User Not Found` - {points}\n'
+        embed=discord.Embed(description=msg, colour=ctx.author.colour)
+        embed.set_author(name="Points Leaderboard", icon_url=ctx.guild.icon_url)
+        await ctx.send(embed=embed)
 
     @commands.command()
     async def register(self, ctx):
@@ -124,8 +302,8 @@ class Rainbow_Six_Siege(commands.Cog):
         await self.data.guild(ctx.guild).lobbies.set_raw(channel_id, "players", value={"list_of_players": [], "type": team_name_type})
         await ctx.send(f"Lobby created with {minimum_members} members limit.")
 
-    @commands.command()
-    async def join(self, ctx):
+    @commands.command(aliases=["j"])
+    async def _join(self, ctx):
         channel_id = str(ctx.channel.id)
         if await self.data.member(ctx.author).registered() == False:
             await ctx.send(f"You should register your self first by using ``{ctx.prefix}register` command.")
@@ -164,8 +342,8 @@ class Rainbow_Six_Siege(commands.Cog):
                     await ctx.send(f"Team One leader {ctx.guild.get_member(int(team_one_leader))}\n\n Team Two Leader {ctx.guild.get_member(int(team_two_leader))}\n\n Leaders can now choose their team mates by using `{ctx.prefix}pick` command.")
                     return
 
-    @commands.command()
-    async def pick(self, ctx, user: discord.Member):
+    @commands.command(aliases=["p"])
+    async def _pick(self, ctx, user: discord.Member):
         """Pick a member for your team."""
         channel_id = str(ctx.channel.id)
         if channel_id not in await self.data.guild(ctx.guild).lobbies():
@@ -211,7 +389,11 @@ class Rainbow_Six_Siege(commands.Cog):
                 if user:
                     members_team_two.append(str(user.name))
             text_msg = f'Map: {map}\nTeam1: {await self.data.guild(ctx.guild).lobbies.get_raw(channel_id,"team_one", "team_name")}\nMembers: {", ".join(members_team_one)}\n\nTeam2: {await self.data.guild(ctx.guild).lobbies.get_raw(channel_id,"team_two", "team_name")}\nMembers: {", ".join(members_team_two)}\n\n\n"React with ▶ for a different map else react with ✅'
-            msg = await ctx.send(text_msg)
+            channel_to_send = ctx.guild.get_channel(self.data.guild(ctx.guild).channel())
+            if channel_to_send:
+                msg = await channel_to_send.send(text_msg)
+            else:
+                msg = await ctx.send(text_msg)
             msg_id = msg.id
             await msg.add_reaction("▶")
             await msg.add_reaction("✅")
@@ -229,11 +411,13 @@ class Rainbow_Six_Siege(commands.Cog):
                     if reaction.emoji == "▶":
                         map = random.choice(maps)
                         text_msg = f'Map: {map}\nTeam1: {await self.data.guild(ctx.guild).lobbies.get_raw(channel_id,"team_one", "team_name")}\nMembers: {", ".join(members_team_one)}\n\nTeam2: {await self.data.guild(ctx.guild).lobbies.get_raw(channel_id,"team_two", "team_name")}\nMembers: {", ".join(members_team_two)}\n\n\n"React with ▶ for a different map else react with ✅'
-                        msg = await ctx.channel.fetch_message(msg_id)
+                        try:
+                            msg = await ctx.channel.fetch_message(msg_id)
+                        except:
+                            msg = await channel_to_send.fetch_message(msg_id)
                         await msg.edit(content=text_msg)
                     elif reaction.emoji == "✅":
-                        await self.data.guild(ctx.guild).lobbies.clear_raw(str(ctx.channel.id))
-                        await ctx.send("Teams successfully created, and the data was deleted!")
+                        await ctx.send("Teams successfully created!")
                         x = False
                 except asyncio.TimeoutError:
                     try:
@@ -242,6 +426,19 @@ class Rainbow_Six_Siege(commands.Cog):
                     except:
                         pass
                     x = False
+
+
+    async def role_check(self, user, guild):
+        roles_list = []
+        for x in [620317742637252620, 620317607395983416, 620317690715832332]:
+            role = guild.get_role(x)
+            if role:
+                roles_list.append(role.name)
+
+        for i in range(len(user.roles)):
+            if user.roles[i].name in roles_list:
+                return True
+        return False
 
     async def _remove_reactions(self, msg):
         try:
