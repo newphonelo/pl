@@ -345,9 +345,11 @@ class Rainbow_Six_Siege(commands.Cog):
     @commands.command(aliases=["L"])
     async def _leave(self, ctx):
         """Leave a queue."""
-        channel_id = str(ctx.channel.id)
-        if channel_id not in await self.data.guild(ctx.guild).lobbies():
-            await ctx.send("There is no queue in this channel!")
+        if await self.data.member(ctx.author).registered() == False:
+            await ctx.send(f"You should register your self first by using ``{ctx.prefix}register` command.")
+        elif await self.data.member(ctx.author).registered() == True:
+            if channel_id not in await self.data.guild(ctx.guild).lobbies():
+                await ctx.send("There is no queue in this channel!")
             return
         elif channel_id in await self.data.guild(ctx.guild).lobbies():
             current_players = await self.data.guild(ctx.guild).lobbies.get_raw(channel_id, "players", "list_of_players")
