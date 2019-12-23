@@ -342,14 +342,12 @@ class Rainbow_Six_Siege(commands.Cog):
                     await ctx.send(f"Team One leader {ctx.guild.get_member(int(team_one_leader))}\n\n Team Two Leader {ctx.guild.get_member(int(team_two_leader))}\n\n Leaders can now choose their team mates by using `{ctx.prefix}pick` command.")
                     return
 
-    @commands.command(aliases=["L"])
+    @commands.command(aliases=["l"])
     async def _leave(self, ctx):
         """Leave a queue."""
-        if await self.data.member(ctx.author).registered() == False:
-            await ctx.send(f"You should register your self first by using ``{ctx.prefix}register` command.")
-        elif await self.data.member(ctx.author).registered() == True:
-            if channel_id not in await self.data.guild(ctx.guild).lobbies():
-                await ctx.send("There is no queue in this channel!")
+        channel_id = str(ctx.channel.id)
+        if channel_id not in await self.data.guild(ctx.guild).lobbies():
+            await ctx.send("There is no queue in this channel!")
             return
         elif channel_id in await self.data.guild(ctx.guild).lobbies():
             current_players = await self.data.guild(ctx.guild).lobbies.get_raw(channel_id, "players", "list_of_players")
