@@ -83,7 +83,7 @@ class Rainbow_Six_Siege(commands.Cog):
             points = await self.data.member(user).points() + points
             if points > 0:
                 await self.data.member(user).points.set(points)
-                await ctx.send(f"Successfully set the points too {points}.")
+                await ctx.send(f"Successfully set the points to {points}.")
             else:
                 await ctx.send("The point can't be less than 0.")
         elif await self.data.member(user).registered() == False:
@@ -99,7 +99,7 @@ class Rainbow_Six_Siege(commands.Cog):
             points = await self.data.member(user).points() - points
             if points > 0:
                 await self.data.member(user).points.set(points)
-                await ctx.send(f"Successfully set the points too {points}.")
+                await ctx.send(f"Successfully set the points to {points}.")
             else:
                 await ctx.send("The point can't be less than 0.")
         elif await self.data.member(user).registered() == False:
@@ -130,7 +130,7 @@ class Rainbow_Six_Siege(commands.Cog):
                     points_to_add = await self.data.member(user).points() + points_to_add
                     await self.data.member(user).points.set(points_to_add)
             #add points to the team captain
-            captain = await ctx.guild.get_member(int(captain_one))
+            captain = ctx.guild.get_member(int(captain_one))
             if captain:
                 points_to_add = await self.data.member(captain).points() + points_to_add
                 await self.data.member(captain).points.set(points_to_add)
@@ -145,7 +145,7 @@ class Rainbow_Six_Siege(commands.Cog):
                     points_to_deduct = await self.data.member(user).points() - points_to_deduct
                     await self.data.member(user).points.set(points_to_deduct)
             #remove points from team captain
-            captain = await ctx.guild.get_member(int(captain_two))
+            captain = ctx.guild.get_member(int(captain_two))
             if captain:
                 points_to_deduct = await self.data.member(captain).points() - points_to_deduct
                 await self.data.member(captain).points.set(points_to_deduct)
@@ -160,7 +160,7 @@ class Rainbow_Six_Siege(commands.Cog):
                     points_to_add = await self.data.member(user).points() + points_to_add
                     await self.data.member(user).points.set(points_to_add)
             #add points the team captain
-            captain = await ctx.guild.get_member(int(captain_two))
+            captain = ctx.guild.get_member(int(captain_two))
             if captain:
                 points_to_add = await self.data.member(captain).points() + points_to_add
                 await self.data.member(captain).points.set(points_to_add)
@@ -175,7 +175,7 @@ class Rainbow_Six_Siege(commands.Cog):
                     points_to_deduct = await self.data.member(user).points() - points_to_deduct
                     await self.data.member(user).points.set(points_to_deduct)
             #remove points from the team one captain
-            captain = await ctx.guild.get_member(int(captain_one))
+            captain = ctx.guild.get_member(int(captain_one))
             if captain:
                 points_to_deduct = await self.data.member(captain).points() - points_to_deduct
                 await self.data.member(captain).points.set(points_to_deduct)
@@ -319,7 +319,7 @@ class Rainbow_Six_Siege(commands.Cog):
                 if len(current_players) < max_players:
                     current_players.append(ctx.author.id)
                     await self.data.guild(ctx.guild).lobbies.set_raw(channel_id, "players", "list_of_players", value=current_players)
-                    await ctx.send("You were added to the queue!")
+                    await ctx.send(f"You were added to the queue! {len(current_players)}/{max_players}")
 
                 if len(current_players) == max_players:
                     team_one_leader = random.choice(current_players)
@@ -342,6 +342,23 @@ class Rainbow_Six_Siege(commands.Cog):
                     await ctx.send(f"Team One leader {ctx.guild.get_member(int(team_one_leader))}\n\n Team Two Leader {ctx.guild.get_member(int(team_two_leader))}\n\n Leaders can now choose their team mates by using `{ctx.prefix}pick` command.")
                     return
 
+    @commands.command()
+    async def leave(self, ctx):
+        """Leave a queue."""
+        channel_id = str(ctx.channel.id)
+        if channel_id not in await self.data.guild(ctx.guild).lobbies():
+            await ctx.send("There is no queue in this channel!")
+            return
+        elif channel_id in await self.data.guild(ctx.guild).lobbies():
+            current_players = await self.data.guild(ctx.guild).lobbies.get_raw(channel_id, "players", "list_of_players")
+            teamOne = await self.data.guild(ctx.guild).lobbies.get_raw(channel_id, "team_one", "max_players")
+            teamTwo = await self.data.guild(ctx.guild).lobbies.get_raw(channel_id, "team_two", "max_players")
+            max_players = int(teamOne + teamTwo)
+            if ctx.autor.id in current_players:
+                current_players.remove(ctx.author.id)
+                await self.data.guild(ctx.guild).lobbies.set_raw(channel_id, "players", "list_of_players", value=current_players)
+                await ctx.send(f"You were removed from the queue! {len(current_players)}/{max_players}")
+
     @commands.command(aliases=["p"])
     async def _pick(self, ctx, user: discord.Member):
         """Pick a member for your team."""
@@ -352,7 +369,7 @@ class Rainbow_Six_Siege(commands.Cog):
         elif channel_id in await self.data.guild(ctx.guild).lobbies():
             captain_one = await self.data.guild(ctx.guild).lobbies.get_raw(channel_id,"team_one", "captains")
             captain_two = await self.data.guild(ctx.guild).lobbies.get_raw(channel_id,"team_two", "captains")
-            if captain_one and captain_one == ctx.author.id:
+            if captain_one and int(captain_one) == ctx.author.id:
                 max_players = int(await self.data.guild(ctx.guild).lobbies.get_raw(channel_id,"team_one", "max_players"))
                 players = await self.data.guild(ctx.guild).lobbies.get_raw(channel_id,"team_one", "players")
                 if len(players) == max_players - 1:
@@ -361,7 +378,7 @@ class Rainbow_Six_Siege(commands.Cog):
                     players.append(user.id)
                     await self.data.guild(ctx.guild).lobbies.set_raw(channel_id,"team_one", "players", value=players)
                     await ctx.send(f"Added {user.name} to the team.")
-            elif captain_two and captain_two == ctx.author.id:
+            elif captain_two and int(captain_two) == ctx.author.id:
                 max_players = int(await self.data.guild(ctx.guild).lobbies.get_raw(channel_id,"team_two", "max_players"))
                 players = await self.data.guild(ctx.guild).lobbies.get_raw(channel_id,"team_two", "players")
                 if len(players) == max_players - 1:
