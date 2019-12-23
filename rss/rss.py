@@ -342,7 +342,7 @@ class Rainbow_Six_Siege(commands.Cog):
                     await ctx.send(f"Team One leader {ctx.guild.get_member(int(team_one_leader))}\n\n Team Two Leader {ctx.guild.get_member(int(team_two_leader))}\n\n Leaders can now choose their team mates by using `{ctx.prefix}pick` command.")
                     return
 
-    @commands.command(aliases=["l"])
+    @commands.command(aliases=["L"])
     async def _leave(self, ctx):
         """Leave a queue."""
         channel_id = str(ctx.channel.id)
