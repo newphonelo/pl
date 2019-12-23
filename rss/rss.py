@@ -83,7 +83,7 @@ class Rainbow_Six_Siege(commands.Cog):
             points = await self.data.member(user).points() + points
             if points > 0:
                 await self.data.member(user).points.set(points)
-                await ctx.send(f"Successfully set the points to {points}.")
+                await ctx.send(f"Successfully set the points too {points}.")
             else:
                 await ctx.send("The point can't be less than 0.")
         elif await self.data.member(user).registered() == False:
@@ -99,7 +99,7 @@ class Rainbow_Six_Siege(commands.Cog):
             points = await self.data.member(user).points() - points
             if points > 0:
                 await self.data.member(user).points.set(points)
-                await ctx.send(f"Successfully set the points to {points}.")
+                await ctx.send(f"Successfully set the points too {points}.")
             else:
                 await ctx.send("The point can't be less than 0.")
         elif await self.data.member(user).registered() == False:
@@ -342,8 +342,8 @@ class Rainbow_Six_Siege(commands.Cog):
                     await ctx.send(f"Team One leader {ctx.guild.get_member(int(team_one_leader))}\n\n Team Two Leader {ctx.guild.get_member(int(team_two_leader))}\n\n Leaders can now choose their team mates by using `{ctx.prefix}pick` command.")
                     return
 
-    @commands.command()
-    async def leave(self, ctx):
+    @commands.command(aliases=["l"])
+    async def _leave(self, ctx):
         """Leave a queue."""
         channel_id = str(ctx.channel.id)
         if channel_id not in await self.data.guild(ctx.guild).lobbies():
