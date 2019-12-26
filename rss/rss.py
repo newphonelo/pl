@@ -164,7 +164,7 @@ class Rainbow_Six_Siege(commands.Cog):
             if captain:
                 points_to_add = await self.data.member(captain).points() + points_to_add
                 await self.data.member(captain).points.set(points_to_add)
-            await ctx.send("Successfully added points to the players in team one and reset the data!")
+            await ctx.send("Successfully added points to the players in team two and reset the data!")
 
             #remove points from the team one
             captain_one = await self.data.guild(ctx.guild).lobbies.get_raw(channel_id,"team_one", "captains")
