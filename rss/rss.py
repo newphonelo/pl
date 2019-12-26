@@ -354,10 +354,12 @@ class Rainbow_Six_Siege(commands.Cog):
             teamOne = await self.data.guild(ctx.guild).lobbies.get_raw(channel_id, "team_one", "max_players")
             teamTwo = await self.data.guild(ctx.guild).lobbies.get_raw(channel_id, "team_two", "max_players")
             max_players = int(teamOne + teamTwo)
-            if ctx.autor.id in current_players:
+            if ctx.author.id in current_players:
                 current_players.remove(ctx.author.id)
                 await self.data.guild(ctx.guild).lobbies.set_raw(channel_id, "players", "list_of_players", value=current_players)
                 await ctx.send(f"You were removed from the queue! {len(current_players)}/{max_players}")
+            elif ctx.author.id not in current_players:
+                await ctx.send("You are not in the lobby!")
 
     @commands.command(aliases=["p"])
     async def _pick(self, ctx, user: discord.Member):
