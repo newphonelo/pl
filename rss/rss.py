@@ -99,9 +99,9 @@ class Rainbow_Six_Siege(commands.Cog):
             points = await self.data.member(user).points() - points
             if points > 0:
                 await self.data.member(user).points.set(points)
-                await ctx.send(f"Successfully set the points too {points}.")
+                await ctx.send(f"Successfully set the points to {points}.")
             else:
-                await ctx.send("The point can't be less than 0.")
+                await ctx.send("The points you are trying to set cannot be less than 0, please try again.")
         elif await self.data.member(user).registered() == False:
             await ctx.send("This user is not registered")
 
