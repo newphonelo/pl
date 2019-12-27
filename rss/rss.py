@@ -449,7 +449,7 @@ class Rainbow_Six_Siege(commands.Cog):
 
     async def role_check(self, user, guild):
         roles_list = []
-        for x in [620317742637252620, 620317607395983416, 620317690715832332]:
+        for x in [620317742637252620, 620317607395983416, 620317690715832332, 333856523103109120]:
             role = guild.get_role(x)
             if role:
                 roles_list.append(role.name)
