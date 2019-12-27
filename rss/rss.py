@@ -181,7 +181,7 @@ class Rainbow_Six_Siege(commands.Cog):
                 await self.data.member(captain).points.set(points_to_deduct)
             await self.data.guild(ctx.guild).lobbies.clear_raw(str(ctx.channel.id))
 
-    @commands.command(aliases=["leaderboard", "lb"])
+    @commands.command(aliases=["lb"])
     async def _leadeboard(self, ctx, page_no: int=None):
         """Leaderboard for the points."""
         server = ctx.guild
